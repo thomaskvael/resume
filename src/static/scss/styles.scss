@@ -1,0 +1,12 @@
+$background: #19628d;
+$text: #d1d5de;
+
+* {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: $background;
+  color: $text;
+}

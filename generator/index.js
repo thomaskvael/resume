@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const copy = require('recursive-copy')
 const glob = require('glob-promise')
+const sass = require('node-sass')
 
 const markdown = require('markdown-it')({
   html: true,
@@ -11,6 +12,8 @@ const markdown = require('markdown-it')({
 
 const base = (...args) => path.join(__dirname, '..', ...args)
 const layout = readSrc('layout.html')
+
+renderCss('styles.css')
 
 glob(base('src', '*.md'))
   .then(function(files) {
@@ -27,8 +30,20 @@ function readSrc(filename) {
   return fs.readFileSync(base('src', filename)).toString('utf8')
 }
 
+function renderCss(filename) {
+  const renderSass = sass.renderSync({
+    file: base('src/static/scss', 'styles.scss'),
+    outputStyle: 'compressed',
+    sourceMap: false
+  })
+
+  const cssOutput = renderSass.css.toString('utf8')
+  fs.writeFileSync(base('docs/static/css', filename), cssOutput)
+  console.log(`Created ${filename}`)
+}
+
 function renderMarkdown(filename) {
-  const text = md.render(readSrc(`${filename}.md`))
+  const text = markdown.render(readSrc(`${filename}.md`))
   const result = template(layout, { CONTENT: text })
   fs.writeFileSync(base('docs', `${filename}.html`), result)
   console.log(`Created ${filename}.html`)
@@ -36,7 +51,11 @@ function renderMarkdown(filename) {
 
 function copyFiles() {
   copy(base('src', 'static'), base('docs', 'static'), {
-    overwrite: true
+    overwrite: true,
+    filter: [
+      '**/*',
+      '!**/*.scss'
+    ]
   })
     .then(function(results) {
       console.info(`Copied public files (${results.length} files)`)
@@ -45,6 +64,7 @@ function copyFiles() {
       console.error('Error copying public files: ', error)
     })
 }
+
 
 function template(text, obj) {
   return text.replace(
